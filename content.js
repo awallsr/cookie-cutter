@@ -2,28 +2,28 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "copyToClipboard") {
     let value = request.value;
     let cookieName = request.cookieName;
+    let timeRemaining = request.timeRemaining;
 
-    // Copy value to clipboard
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(value).then(function () {
-        // Show toast notification
-        showToast(`Cookie '${cookieName}' copied to clipboard.`);
+        showCopySuccessToast(cookieName, timeRemaining);
       }, function (err) {
         console.error('Could not copy text: ', err);
-        fallbackCopyTextToClipboard(value, cookieName);
+        fallbackCopyTextToClipboard(value, cookieName, timeRemaining);
       });
     } else {
-      fallbackCopyTextToClipboard(value, cookieName);
+      fallbackCopyTextToClipboard(value, cookieName, timeRemaining);
     }
   } else if (request.action === "showToast") {
     showToast(request.message);
   }
 });
 
-function fallbackCopyTextToClipboard(text, cookieName) {
+function fallbackCopyTextToClipboard(text, cookieName, timeRemaining) {
   let textArea = document.createElement("textarea");
   textArea.value = text;
 
+  // Avoid scrolling to bottom
   textArea.style.position = "fixed";
   textArea.style.top = "0";
   textArea.style.left = "0";
@@ -42,7 +42,7 @@ function fallbackCopyTextToClipboard(text, cookieName) {
   try {
     let successful = document.execCommand('copy');
     if (successful) {
-      showToast(`Cookie '${cookieName}' copied to clipboard.`);
+      showCopySuccessToast(cookieName, timeRemaining);
     } else {
       showToast(`Failed to copy cookie '${cookieName}'.`);
     }
@@ -54,7 +54,48 @@ function fallbackCopyTextToClipboard(text, cookieName) {
   document.body.removeChild(textArea);
 }
 
+function showCopySuccessToast(cookieName, timeRemaining) {
+  let message = `Cookie '${cookieName}' copied to clipboard.`;
+
+  if (timeRemaining !== null) {
+    let timeString = formatTimeRemaining(timeRemaining);
+    message += ` Expires in ${timeString}.`;
+  } else {
+    message += ` (Session cookie)`;
+  }
+
+  showToast(message);
+}
+
+function formatTimeRemaining(timeInSeconds) {
+  if (timeInSeconds <= 0) {
+    return "expired";
+  }
+
+  let seconds = Math.floor(timeInSeconds % 60);
+  let minutes = Math.floor((timeInSeconds / 60) % 60);
+  let hours = Math.floor((timeInSeconds / (60 * 60)) % 24);
+  let days = Math.floor(timeInSeconds / (60 * 60 * 24));
+
+  let timeComponents = [];
+  if (days > 0) {
+    timeComponents.push(`${days}d`);
+  }
+  if (hours > 0) {
+    timeComponents.push(`${hours}h`);
+  }
+  if (minutes > 0) {
+    timeComponents.push(`${minutes}m`);
+  }
+  if (seconds > 0) {
+    timeComponents.push(`${seconds}s`);
+  }
+
+  return timeComponents.join(' ');
+}
+
 function showToast(message) {
+  // Create a div element for the toast
   let toast = document.createElement('div');
   toast.textContent = message;
   // Style the toast
@@ -66,9 +107,12 @@ function showToast(message) {
   toast.style.color = 'white';
   toast.style.borderRadius = '5px';
   toast.style.zIndex = '9999';
+  toast.style.fontFamily = 'Arial, sans-serif';
+  toast.style.fontSize = '14px';
+
   document.body.appendChild(toast);
 
   setTimeout(function () {
     document.body.removeChild(toast);
-  }, 3000);
+  }, 5000);
 }

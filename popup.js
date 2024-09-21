@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', function () {
 function showToast(message, color = 'green') {
   let toast = document.createElement('div');
   toast.textContent = message;
-  // Style the toast
   toast.style.position = 'fixed';
   toast.style.top = '10px';
   toast.style.padding = '10px';

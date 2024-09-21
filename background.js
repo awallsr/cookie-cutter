@@ -11,15 +11,21 @@ chrome.commands.onCommand.addListener(function (command) {
           chrome.cookies.get({ url: url, name: cookieName }, function (cookie) {
             if (cookie) {
               let cookieValue = cookie.value;
+              let expirationDate = cookie.expirationDate;
 
-              // Send message to content script to copy the value and show toast
+              let timeRemaining = null;
+              if (expirationDate) {
+                let currentTime = Date.now() / 1000; // in seconds
+                timeRemaining = expirationDate - currentTime; // in seconds
+              }
+
               chrome.tabs.sendMessage(tab.id, {
                 action: "copyToClipboard",
                 value: cookieValue,
-                cookieName: cookieName
+                cookieName: cookieName,
+                timeRemaining: timeRemaining
               });
             } else {
-              // Show toast notification for missing cookie
               chrome.tabs.sendMessage(tab.id, {
                 action: "showToast",
                 message: `Cookie '${cookieName}' not found.`
@@ -28,7 +34,6 @@ chrome.commands.onCommand.addListener(function (command) {
           });
         });
       } else {
-        // Prompt user to set the cookie name
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
           let tab = tabs[0];
           chrome.tabs.sendMessage(tab.id, {
